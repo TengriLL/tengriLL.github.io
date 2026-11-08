@@ -12098,5 +12098,120 @@ window.fetch=function(url,opts){
 };
 })();
 </script>
+<script>/*uf-units-v1*/(function ufFeature(){
+  try{
+    if(window.__ufUnits)return;
+    var L='A-Za-z\u00c7\u011e\u0130\u00d6\u015e\u00dc\u00e7\u011f\u0131\u00f6\u015f\u00fc';
+    var MAP={kg:1,gr:1,g:1,mg:1,cm:1,mm:1,m:1,mt:1,km:1,lt:1,l:1,ml:1,cl:1,dl:1,kw:1,w:1,v:1,ah:1,mah:1,hz:1,khz:1,mhz:1,ghz:1,kb:1,mb:1,gb:1,tb:1,'in\u00e7':1,inch:1,ft:1,cc:1};
+    var CAN={g:'gr',m:'mt',l:'lt'};
+    var NUM='\\d+(?:[.,]\\d+)?', SEP='\\s*[xX\u00d7*]\\s*';
+    var UN='['+L+']{1,5}';
+    function fix(s,cnt){
+      var src=String(s||'');if(!src||!/\d/.test(src))return src;
+      var rep=function(m,r){if(r!==m&&cnt)cnt.n=(cnt.n||0)+1;return r};
+      var B='(^|[^0-9A-Za-z.,])';
+      src=src.replace(new RegExp(B+'((?:'+NUM+')(?:'+SEP+NUM+')+)\\s*('+UN+')(?!['+L+'])','g'),function(m,p,dim,u){
+        var low=u.toLocaleLowerCase('tr-TR');if(!MAP[low])return m;low=CAN[low]||low;
+        return rep(m,p+dim.replace(new RegExp(SEP,'g'),' x ')+' '+low)});
+      src=src.replace(new RegExp(B+'((?:'+NUM+'\\s*'+UN+')(?:'+SEP+NUM+'\\s*'+UN+')+)(?![0-9A-Za-z])','g'),function(m,p,chain){
+        var parts=chain.replace(new RegExp(SEP,'g'),'|').split('|');if(parts.length<2)return m;
+        var rb=[];
+        for(var i=0;i<parts.length;i++){
+          var tm=parts[i].match(new RegExp('^('+NUM+')(\\s*)('+UN+')$'));if(!tm)return m;
+          var low=tm[3].toLocaleLowerCase('tr-TR');if(!MAP[low])return m;low=CAN[low]||low;rb.push(tm[1]+' '+low)}
+        return rep(m,p+rb.join(' x '))});
+      src=src.replace(new RegExp(B+'((?:'+NUM+')(?:'+SEP+NUM+')+)(?![0-9A-Za-z])','g'),function(m,p,dim){
+        return rep(m,p+dim.replace(new RegExp(SEP,'g'),' x '))});
+      src=src.replace(new RegExp(B+'('+NUM+')([\\s\\u00A0]*)('+UN+')(?!['+L+'])','g'),function(m,p,num,sep,unit){
+        var low=unit.toLocaleLowerCase('tr-TR');if(!MAP[low])return m;low=CAN[low]||low;
+        if(sep===' '&&unit===low)return m;return rep(m,p+num+' '+low)});
+      return src;
+    }
+    var LB='(?<![0-9A-Za-z.,])';
+    var PATS=[
+      new RegExp(LB+'(?:'+NUM+')(?:'+SEP+NUM+')+\\s*'+UN+'(?!['+L+'])','g'),
+      new RegExp(LB+'(?:'+NUM+'\\s*'+UN+')(?:'+SEP+NUM+'\\s*'+UN+')+(?![0-9A-Za-z])','g'),
+      new RegExp(LB+'(?:'+NUM+')(?:'+SEP+NUM+')+(?![0-9A-Za-z])','g'),
+      new RegExp(LB+NUM+'[\\s\\u00A0]*'+UN+'(?!['+L+'])','g')
+    ];
+    function hits(v){
+      var out=[];
+      for(var i=0;i<PATS.length;i++){
+        var re=PATS[i];re.lastIndex=0;var m;
+        while((m=re.exec(v))){
+          if(m[0].length===0){re.lastIndex++;continue}
+          var s=m.index,e=s+m[0].length;
+          if(fix(m[0],null)===m[0])continue;
+          var clash=false;
+          for(var j=0;j<out.length;j++){if(s<out[j].e&&e>out[j].s){clash=true;break}}
+          if(!clash)out.push({s:s,e:e});
+        }
+      }
+      out.sort(function(a,b){return a.s-b.s});
+      return out;
+    }
+    window.__ufUnits={fix:fix,hits:hits};
+    var canHl=!!(window.CSS&&CSS.highlights&&typeof Highlight==='function');
+    var st=document.createElement('style');
+    st.textContent='::highlight(ufhl1),::highlight(ufhl2){background-color:#fbbf24;color:#000}';
+    (document.head||document.documentElement).appendChild(st);
+    function textNodes(ed){
+      var out=[],wk=document.createTreeWalker(ed,NodeFilter.SHOW_TEXT,null),n;
+      while((n=wk.nextNode()))out.push(n);
+      return out;
+    }
+    function setup(id,idx){
+      var ed=document.getElementById(id);if(!ed)return;
+      var bar=document.createElement('div');
+      bar.style.cssText='display:none;margin:8px 0;align-items:center;gap:10px;flex-wrap:wrap';
+      var btn=document.createElement('button');
+      btn.type='button';
+      btn.style.cssText='padding:6px 14px;background:#f59e0b;color:#141000;border:1px solid rgba(255,255,255,.35);border-radius:6px;font-size:12px;font-weight:800;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.35);white-space:nowrap';
+      var msg=document.createElement('span');
+      msg.style.cssText='font-size:12px;font-weight:700;color:#34d399';
+      bar.appendChild(btn);bar.appendChild(msg);
+      ed.insertAdjacentElement('afterend',bar);
+      var timer=null,keepUntil=0,name='ufhl'+idx;
+      function refresh(){
+        timer=null;
+        var cnt={n:0},nodes=textNodes(ed),ranges=[];
+        for(var i=0;i<nodes.length;i++){
+          var v=nodes[i].nodeValue||'';if(!v||!/\d/.test(v))continue;
+          fix(v,cnt);
+          if(canHl){
+            var hs=hits(v);
+            for(var k=0;k<hs.length;k++){var r=document.createRange();r.setStart(nodes[i],hs[k].s);r.setEnd(nodes[i],hs[k].e);ranges.push(r)}
+          }
+        }
+        if(canHl){try{if(ranges.length)CSS.highlights.set(name,new Highlight(...ranges));else CSS.highlights.delete(name)}catch(e){}}
+        btn.textContent='\u26a1 Birimleri D\u00fczelt ('+cnt.n+')';
+        btn.style.display=cnt.n>0?'':'none';
+        var show=cnt.n>0||Date.now()<keepUntil;
+        bar.style.display=show?'flex':'none';
+        if(cnt.n>0)msg.textContent='';
+      }
+      function schedule(){if(timer)clearTimeout(timer);timer=setTimeout(refresh,250)}
+      ['input','paste','keyup'].forEach(function(ev){ed.addEventListener(ev,schedule)});
+      try{new MutationObserver(schedule).observe(ed,{childList:true,subtree:true,characterData:true})}catch(e){}
+      btn.addEventListener('click',function(ev){
+        ev.preventDefault();
+        var cnt={n:0},nodes=textNodes(ed);
+        for(var i=0;i<nodes.length;i++){
+          var v=nodes[i].nodeValue||'';if(!v||!/\d/.test(v))continue;
+          var fx=fix(v,cnt);if(fx!==v)nodes[i].nodeValue=fx;
+        }
+        try{ed.normalize()}catch(e){}
+        try{ed.dispatchEvent(new Event('input',{bubbles:true}))}catch(e){}
+        msg.textContent=cnt.n?('\u2705 '+cnt.n+' birim yaz\u0131m\u0131 d\u00fczeltildi'):'\u2705 Birim yaz\u0131mlar\u0131 zaten do\u011fruydu';
+        keepUntil=Date.now()+2600;
+        if(canHl){try{CSS.highlights.delete(name)}catch(e){}}
+        refresh();
+        setTimeout(refresh,2700);
+      });
+      refresh();
+    }
+    setup('input1',1);setup('input2',2);
+  }catch(e){}
+})();</script>
 </body>
 </html>
